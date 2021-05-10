@@ -101,6 +101,21 @@ class editorStore {
         }
     }
 
+	@action changeLabel = (nodeId) => {
+        // 修改label样式 目前 文字大小 颜色
+		console.log('id', nodeId)
+        if (nodeId) {
+            const target = this.graph.findDataById(nodeId)
+			console.log(target)
+			this.graph.update(target.id,{
+				label: 'ramiro'
+            }, true)
+            
+            this.graph.paint()
+            this.graph.fitView()
+        }
+    }
+
     @action setEdit = flag => {
         this.edit = flag
     }

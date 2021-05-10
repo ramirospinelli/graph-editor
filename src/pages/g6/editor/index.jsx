@@ -7,9 +7,33 @@ import GraphBar from "../graphbar"
 import Toolbar from "../toolbar"
 import classNames from "classnames"
 import { cloneDeep } from "lodash"
+import insertCss from 'insert-css';
 import { message } from "antd"
 import styles from "./index.module.less"
-import {useStores} from "../../../utils/mobx";
+import { useStores } from "../../../utils/mobx";
+
+insertCss(`
+  #contextMenu {
+    position: absolute;
+    list-style-type: none;
+    padding: 10px 8px;
+    left: -150px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e2e2e2;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #545454;
+  }
+  #contextMenu li {
+    cursor: pointer;
+	list-style-type:none;
+    list-style: none;
+    margin-left: 0px;
+  }
+  #contextMenu li:hover {
+    color: #aaa;
+  }
+`);
 
 const Editor = () => {
     const inputEditRef = useRef()
@@ -30,7 +54,8 @@ const Editor = () => {
 
     const [graph, setGraph] = useState(graphRef.current) // 设置画布
     const [editFlag, setEditFlag] = useState(false)
-    const [editValue, setEditValue] = useState("")
+	const [editValue, setEditValue] = useState("")
+	const { changeLabel } = editorStore
 
     const textShow = () => {
         // 编辑文本是否显示
@@ -39,15 +64,47 @@ const Editor = () => {
 
     const textChange = (event) => {
         // 设置改变的文本内容
-        const val = event.target.value
+		const val = event.target.value
+		console.log(val)
         setEditValue(val)
     }
+
+	const contextMenu = new G6.Menu({
+		getContent(evt) {
+		  let header;
+		  if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
+			header = 'Canvas ContextMenu';
+		  } else if (evt.item) {
+			const itemType = evt.item.getType();
+			header = `${itemType.toUpperCase()} ContextMenu`;
+		  }
+		  return `
+		  <h3>${header}</h3>
+		  <ul>
+			<li>Edit Label</li>
+			<li>Edit Stroke Color</li>
+			<li>Edit Label COlor</li>
+		  </ul>`;
+		},
+		handleMenuClick: (target, item) => {
+			console.log(target, item);
+			console.log(graph)
+			changeLabel(item._cfg.id)
+			/*graph.update(item.cfg.id,{
+				label: 'ramiro'
+            }, true)*/
+		},
+		offsetX: 16 + 10,
+		offsetY: 0,
+		itemTypes: ['node', 'edge', 'canvas'],
+	  });
 
     const setGraphObj = () => {
         const graph = new G6.TreeGraph({
             container: 'container',
             width: 1200,
-            height: 600,
+			height: 600,
+			plugins: [contextMenu],
             modes: {
                 default: [
                     {
