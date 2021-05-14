@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react"
 
 import G6 from "../register"
 import GraphBar from "../graphbar"
+import NodeContextMenu from "./contextMenu"
 import Toolbar from "../toolbar"
 import classNames from "classnames"
 import { cloneDeep } from "lodash"
@@ -49,13 +50,16 @@ const Editor = () => {
         currentId,
         fontSize,
         addChildItem,
-        setTreeData
+		setTreeData,
+		changeLabel
     } = editorStore
 
     const [graph, setGraph] = useState(graphRef.current) // 设置画布
     const [editFlag, setEditFlag] = useState(false)
 	const [editValue, setEditValue] = useState("")
-	const { changeLabel } = editorStore
+	const [showNodeContextMenu, setShowNodeContextMenu] = useState(false)
+  	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
+  	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
 
     const textShow = () => {
         // 编辑文本是否显示
@@ -81,14 +85,13 @@ const Editor = () => {
 		  return `
 		  <h3>${header}</h3>
 		  <ul>
-			<li>Edit Label</li>
+			<li id='edit'>Edit Label</li>
 			<li>Edit Stroke Color</li>
 			<li>Edit Label COlor</li>
 		  </ul>`;
 		},
 		handleMenuClick: (target, item) => {
-			console.log(target, item);
-			console.log(graph)
+			console.log(target.id);
 			changeLabel(item._cfg.id)
 			/*graph.update(item.cfg.id,{
 				label: 'ramiro'
@@ -97,6 +100,30 @@ const Editor = () => {
 		offsetX: 16 + 10,
 		offsetY: 0,
 		itemTypes: ['node', 'edge', 'canvas'],
+	});
+	
+	const toolbar = new G6.ToolBar({
+		getContent: () => {
+		  return `
+			<ul>
+			  <li code='add'>Add Node</li>
+			  <li code='undo'>Undo</li>
+			</ul>
+		  `
+		},
+		handleClick: (code, graph) => {
+			console.log(code, graph)
+		  if (code === 'add') {
+			graph.addItem('node', {
+			  id: 'ramiro',
+			  label: 'node2',
+			  x: 300,
+			  y: 150
+			})
+		  } else if (code === 'undo') {
+			toolbar.undo()
+		  }
+		}
 	  });
 
     const setGraphObj = () => {
@@ -104,7 +131,7 @@ const Editor = () => {
             container: 'container',
             width: 1200,
 			height: 600,
-			plugins: [contextMenu],
+			//plugins: [contextMenu, toolbar],
             modes: {
                 default: [
                     {
@@ -234,7 +261,23 @@ const Editor = () => {
             }
             graph.update(item, model)
             graph.paint()
-        })
+		})
+		
+		graph.on('node:contextmenu', evt => {
+			console.log(evt)
+			const { item } = evt
+			const model = item.getModel()
+			const { x, y } = model
+			const point = graph.getCanvasByPoint(x, y)
+			setCurrentId(model.id)
+			setNodeContextMenuX(point.x)
+			setNodeContextMenuY(point.y)
+			setShowNodeContextMenu(true)
+		})
+		
+		graph.on('node:mouseleave', () => {
+			setShowNodeContextMenu(false)
+		  })
 
         graphRef.current = graph
         setGraph(graphRef.current)
@@ -338,7 +381,8 @@ const Editor = () => {
                         )}
                         onChange={textChange}
                         onBlur={textShow}
-                    />
+					/>
+					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} /> }
                 </div>
             </div>
 

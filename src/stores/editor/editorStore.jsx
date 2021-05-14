@@ -20,21 +20,69 @@ class editorStore {
                 fontSize: this.defaultFontSize
             }
         },
-        // linkPoints: {
-        //     top: true,
-        //     bottom: true,
-        //     left: true,
-        //     right: true,
-        //     size: 5,
-        //     fill: '#fff',
-        // },
         style: {
             radius: 6
         },
         anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]], // 四个锚点
-        children: [
-
-        ]
+		children: [{
+            id: '2',
+            parent: '1',
+            label: "node-1",
+            labelCfg: {
+                style: {
+                    fontSize: this.defaultFontSize
+                }
+            },
+            style: {
+                radius: 6,
+            },
+            anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+            children: []
+		},
+		{
+            id: '3',
+            parent: '1',
+            label: "node-2",
+            labelCfg: {
+                style: {
+                    fontSize: this.defaultFontSize
+                }
+            },
+            style: {
+                radius: 6,
+            },
+            anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+            children: [{
+				id: '2-1',
+				parent: '2',
+				label: "node-2-1",
+				labelCfg: {
+					style: {
+						fontSize: this.defaultFontSize
+					}
+				},
+				style: {
+					radius: 6,
+				},
+				anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+				children: []
+			}]
+			},
+			{
+				id: '4',
+				parent: '1',
+				label: "node-3",
+				labelCfg: {
+					style: {
+						fontSize: this.defaultFontSize
+					}
+				},
+				style: {
+					radius: 6,
+				},
+				anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+				children: []
+			}]
     }
 
     @action setTreeData = (data) => {
@@ -91,9 +139,15 @@ class editorStore {
             const target = this.graph.findDataById(this.currentId)
 			console.log(target)
 			console.log(value, type)
-            this.graph.update(target.id,{
+			this.graph.update(target.id, {
+				labelCfg: {
+                    style: {
+						fill: 'red',
+                    }
+				},
 				style: {
-					[type]: value
+					fill: 'blue',
+					stroke: 'red'
 				}
             }, true)
             this.graph.paint()
@@ -101,11 +155,11 @@ class editorStore {
         }
     }
 
-	@action changeLabel = (nodeId) => {
+	@action changeLabel = () => {
         // 修改label样式 目前 文字大小 颜色
-		console.log('id', nodeId)
-        if (nodeId) {
-            const target = this.graph.findDataById(nodeId)
+		console.log(this.currentId)
+        if (this.currentId) {
+            const target = this.graph.findDataById(this.currentId)
 			console.log(target)
 			this.graph.update(target.id,{
 				label: 'ramiro'
