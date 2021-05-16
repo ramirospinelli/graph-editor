@@ -3,74 +3,45 @@ import { action, observable } from 'mobx';
 import { message } from "antd"
 
 class editorStore {
-    @observable graph = null // 画布
-    @observable currentType = null // 当前选中目标的类型 node edge
-    @observable currentId = null // 当前选中ID
-    @observable edit = false // 编辑状态
-    @observable fontSize = 14 // 供修改的文字大小
-    @observable defaultFontSize = 14 // 默认文字大小
+	@observable graph = null // 画布
+	@observable currentType = null // 当前选中目标的类型 node edge
+	@observable currentId = null // 当前选中ID
+	@observable edit = false // 编辑状态
+	@observable fontSize = 14 // 供修改的文字大小
+	@observable defaultFontSize = 14 // 默认文字大小
 
-    // 初始数据
-    @observable treeData = {
-        id: "1",
-        parent: null,
-        label: "root Node",
-        labelCfg: {
-            style: {
-                fontSize: this.defaultFontSize
-            }
-        },
-        style: {
-            radius: 6
-        },
-        anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]], // 四个锚点
-		children: [{
-            id: '2',
-            parent: '1',
-            label: "node-1",
-            labelCfg: {
-                style: {
-                    fontSize: this.defaultFontSize
-                }
-            },
-            style: {
-                radius: 6,
-            },
-            anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
-            children: []
+	// 初始数据
+	@observable treeData = {
+		nodes: [{
+			id: "1",
+			label: "node-1",
+			labelCfg: {
+				style: {
+					fontSize: this.defaultFontSize
+				}
+			},
+			style: {
+				radius: 6
+			},
+			anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+			comboId: "combo1"
 		},
 		{
-            id: '3',
-            parent: '1',
-            label: "node-2",
-            labelCfg: {
-                style: {
-                    fontSize: this.defaultFontSize
-                }
-            },
-            style: {
-                radius: 6,
-            },
-            anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
-            children: [{
-				id: '2-1',
-				parent: '2',
-				label: "node-2-1",
-				labelCfg: {
-					style: {
-						fontSize: this.defaultFontSize
-					}
-				},
+			id: '2',
+			label: "node-2",
+			labelCfg: {
 				style: {
-					radius: 6,
-				},
-				anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
-				children: []
-			}]
+					fontSize: this.defaultFontSize
+				}
 			},
-			{
-				id: '4',
-				parent: '1',
+			style: {
+				radius: 6,
+			},
+			anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
+			comboId: "combo1"
+			},
+		{
+				id: '3',
 				label: "node-3",
 				labelCfg: {
 					style: {
@@ -80,10 +51,43 @@ class editorStore {
 				style: {
 					radius: 6,
 				},
+				comboId: "combo3"
+			},
+			{
+				id: '4',
+				label: "node-4",
+				labelCfg: {
+					style: {
+						fontSize: this.defaultFontSize
+					}
+				},
+				style: {
+					radius: 6,
+				},
 				anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
-				children: []
-			}]
-    }
+				comboId: "combo2"
+			}],
+		edges: [
+			{
+				source: '1',
+				target: '2'
+			}, {
+				source: '2',
+				target: '3'
+			}, {
+				source: '3',
+				target: '4'
+			},{
+				source: '4',
+				target: '2'
+			}
+		],
+		combos: [
+			{ id: 'combo1', label: 'Combo 1', parentId: 'combo2' },
+			{ id: 'combo2', label: 'Combo 2' },
+			{ id: 'combo3', label: 'Combo 3'},
+		  ],
+	}
 
     @action setTreeData = (data) => {
         this.treeData = data
@@ -116,12 +120,8 @@ class editorStore {
     }
 
     @action changeLabelCfg = (value, type) => {
-        // 修改label样式 目前 文字大小 颜色
-        if (this.currentId) {
-            const target = this.graph.findDataById(this.currentId)
-			console.log(target)
-			console.log(value, type)
-            this.graph.update(target.id,{
+		if (this.currentId) {
+            this.graph.update(this.currentId,{
                 labelCfg: {
                     style: {
 						[type]: value,
@@ -133,13 +133,9 @@ class editorStore {
         }
     }
 
-	@action changeStrokeCfg = (value, type) => {
-        // 修改label样式 目前 文字大小 颜色
-        if (this.currentId) {
-            const target = this.graph.findDataById(this.currentId)
-			console.log(target)
-			console.log(value, type)
-			this.graph.update(target.id, {
+	@action changeColor = (nodeId) => {
+        if (nodeId) {
+			this.graph.update(nodeId, {
 				labelCfg: {
                     style: {
 						fill: 'red',
@@ -155,13 +151,9 @@ class editorStore {
         }
     }
 
-	@action changeLabel = () => {
-        // 修改label样式 目前 文字大小 颜色
-		console.log(this.currentId)
-        if (this.currentId) {
-            const target = this.graph.findDataById(this.currentId)
-			console.log(target)
-			this.graph.update(target.id,{
+	@action changeLabel = (nodeId) => {
+        if (nodeId) {
+			this.graph.update(nodeId,{
 				label: 'ramiro'
             }, true)
             

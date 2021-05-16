@@ -51,8 +51,86 @@ const Editor = () => {
         fontSize,
         addChildItem,
 		setTreeData,
-		changeLabel
+		changeLabel,
+		changeColor
     } = editorStore
+
+	const collapseIcon = (x, y, r) => {
+  return [
+    ['M', x - r, y],
+    ['a', r, r, 0, 1, 0, r * 2, 0],
+    ['a', r, r, 0, 1, 0, -r * 2, 0],
+    ['M', x - r + 4, y],
+    ['L', x - r + 2 * r - 4, y],
+  ];
+};
+const expandIcon = (x, y, r) => {
+  return [
+    ['M', x - r, y],
+    ['a', r, r, 0, 1, 0, r * 2, 0],
+    ['a', r, r, 0, 1, 0, -r * 2, 0],
+    ['M', x - r + 4, y],
+    ['L', x - r + 2 * r - 4, y],
+    ['M', x - r + r, y - r + 4],
+    ['L', x, y + r - 4],
+  ];
+};
+
+G6.registerCombo(
+	'cCircle',
+	{
+	  drawShape: function draw(cfg, group) {
+		const self = this;
+		// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
+		const style = self.getShapeStyle(cfg);
+		// Add a circle shape as keyShape which is the same as the extended 'circle' type Combo
+		const circle = group.addShape('circle', {
+		  attrs: {
+			...style,
+			x: 0,
+			y: 0,
+			r: style.r,
+		  },
+		  draggable: true,
+		  name: 'combo-keyShape',
+		});
+		// Add the marker on the bottom
+		const marker = group.addShape('marker', {
+		  attrs: {
+			...style,
+			fill: '#fff',
+			opacity: 1,
+			x: 0,
+			y: style.r,
+			r: 10,
+			symbol: collapseIcon,
+		  },
+		  draggable: true,
+		  name: 'combo-marker-shape',
+		});
+  
+		return circle;
+	  },
+	  // Define the updating logic for the marker
+	  afterUpdate: function afterUpdate(cfg, combo) {
+		const self = this;
+		// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
+		const style = self.getShapeStyle(cfg);
+		const group = combo.get('group');
+		// Find the marker shape in the graphics group of the Combo
+		const marker = group.find((ele) => ele.get('name') === 'combo-marker-shape');
+		// Update the marker shape
+		marker.attr({
+		  x: 0,
+		  y: style.r,
+		  // The property 'collapsed' in the combo data represents the collapsing state of the Combo
+		  // Update the symbol according to 'collapsed'
+		  symbol: cfg.collapsed ? expandIcon : collapseIcon,
+		});
+	  },
+	},
+	'circle',
+  );
 
     const [graph, setGraph] = useState(graphRef.current) // 设置画布
     const [editFlag, setEditFlag] = useState(false)
@@ -75,6 +153,7 @@ const Editor = () => {
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
+			console.log(evt)
 		  let header;
 		  if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
 			header = 'Canvas ContextMenu';
@@ -85,70 +164,59 @@ const Editor = () => {
 		  return `
 		  <h3>${header}</h3>
 		  <ul>
-			<li id='edit'>Edit Label</li>
-			<li>Edit Stroke Color</li>
-			<li>Edit Label COlor</li>
+			<li id='edit-label' styles={{cursor: 'pointer'}}>Edit Label</li>
+			<li id='edit-color'>Edit Color</li>
 		  </ul>`;
 		},
 		handleMenuClick: (target, item) => {
-			console.log(target.id);
-			changeLabel(item._cfg.id)
+			console.log(item)
+			switch (target.id) {
+				case 'edit-label': {
+					changeLabel(item._cfg.id)
+					break;
+				}
+				case 'edit-color': {
+					changeColor(item._cfg.id)
+					break;
+				}
+				default: {
+					break;
+				}
+			}
 			/*graph.update(item.cfg.id,{
 				label: 'ramiro'
             }, true)*/
 		},
-		offsetX: 16 + 10,
-		offsetY: 0,
+		offsetX: nodeContextMenuX,
+		offsetY: nodeContextMenuY,
 		itemTypes: ['node', 'edge', 'canvas'],
 	});
 	
-	const toolbar = new G6.ToolBar({
-		getContent: () => {
-		  return `
-			<ul>
-			  <li code='add'>Add Node</li>
-			  <li code='undo'>Undo</li>
-			</ul>
-		  `
-		},
-		handleClick: (code, graph) => {
-			console.log(code, graph)
-		  if (code === 'add') {
-			graph.addItem('node', {
-			  id: 'ramiro',
-			  label: 'node2',
-			  x: 300,
-			  y: 150
-			})
-		  } else if (code === 'undo') {
-			toolbar.undo()
-		  }
-		}
-	  });
+	const toolbar = new G6.ToolBar({});
 
     const setGraphObj = () => {
-        const graph = new G6.TreeGraph({
+        const graph = new G6.Graph({
             container: 'container',
             width: 1200,
 			height: 600,
-			//plugins: [contextMenu, toolbar],
-            modes: {
-                default: [
-                    {
-                        type: 'collapse-expand',
-                        onChange: function onChange(item, collapsed) {
-                            // const data = item.get('model').data;
-                            // data.collapsed = collapsed;
-                            const model = item.getModel()
-                            model.collapsed = collapsed;
-                            return true;
-                        },
-                    },
-                    'drag-canvas',
-                    'zoom-canvas',
-                ],
-                edit: []
-            },
+			plugins: [contextMenu, toolbar],
+			//groupByTypes: false,
+			fitView: true,
+			defaultCombo: {
+				type: 'cCircle',
+				labelCfg: {
+				refY: 2,
+				},
+			},
+			comboStateStyles: {
+				dragenter: {
+				lineWidth: 4,
+				stroke: '#FE9797',
+				},
+			},
+			modes: {
+				default: ['drag-combo', 'drag-node', 'drag-canvas', 'click-select'],
+			  },
             defaultNode: {
                 type: "rect",
                 size: [80, 30]
@@ -163,33 +231,58 @@ const Editor = () => {
                 selected: {
                     stroke: "blue"
                 }
-            },
-            // 布局
-            layout: {
-                type: 'mindmap',
-                direction: 'LR',
-                getHeight: () => {
-                    return 16;
-                },
-                getWidth: () => {
-                    return 16;
-                },
-                getVGap: () => {
-                    return 10;
-                },
-                getHGap: () => {
-                    return 100;
-                },
-                getSide: () => {
-                    return 'right';
-                },
-            },
-        });
+			},
+			 layout: {
+				type: 'mds',
+				linkDistance: 100,
+			},
+		});
+		
+		graph.on('combo:click', (e) => {
+			if (e.target.get('name') === 'combo-marker-shape') {
+			  // graph.collapseExpandCombo(e.item.getModel().id);
+			  graph.collapseExpandCombo(e.item);
+			  if (graph.get('layout')) graph.layout();
+			  else graph.refreshPositions();
+			}
+		  });
+		  
+		  graph.on('combo:dragend', (e) => {
+			graph.getCombos().forEach((combo) => {
+			  graph.setItemState(combo, 'dragenter', false);
+			});
+		  });
+		  graph.on('node:dragend', (e) => {
+			graph.getCombos().forEach((combo) => {
+			  graph.setItemState(combo, 'dragenter', false);
+			});
+		  });
+		  
+		  graph.on('combo:dragenter', (e) => {
+			graph.setItemState(e.item, 'dragenter', true);
+		  });
+		  graph.on('combo:dragleave', (e) => {
+			graph.setItemState(e.item, 'dragenter', false);
+		  });
+		  
+		  graph.on('combo:mouseenter', (evt) => {
+			const { item } = evt;
+			graph.setItemState(item, 'active', true);
+		  });
+		  
+		  graph.on('combo:mouseleave', (evt) => {
+			const { item } = evt;
+			graph.setItemState(item, 'active', false);
+		  });
 
         graph.on("node:click", (evt) => {
             const { item } = evt
             const model = item.getModel()
-            const mode = graph.getCurrentMode()
+			const mode = graph.getCurrentMode()
+			graph.setItemState(item, "selected", true)
+			graph.setItemState(item, "unselected", false)
+			setCurrentId(model.id)
+			setCurrentType("node")
             if (mode === "edit") {
                 // 编辑模式 显示红框
                 // 清除其他节点的选中状态
@@ -296,7 +389,7 @@ const Editor = () => {
 
     const renderGraph = () => {
         graph.clear(); // 清除画布
-        graph.data(cloneDeep(treeData)); // 传递数据
+        graph.data(treeData); // 传递数据
         graph.render(); // 渲染画布
         graph.fitView(); // 适应视图
     }
@@ -369,8 +462,6 @@ const Editor = () => {
     return (
         <div className={styles.editorContainer}>
             <Toolbar />
-            <div className={styles.canvasBox}>
-                <GraphBar />
                 <div className={styles.editBox} id={"container"} >
                     <input
                         type="text"
@@ -384,8 +475,6 @@ const Editor = () => {
 					/>
 					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} /> }
                 </div>
-            </div>
-
         </div>
 
     )
