@@ -202,6 +202,7 @@ G6.registerCombo(
 			plugins: [contextMenu, toolbar],
 			//groupByTypes: false,
 			fitView: true,
+			enabledStack: true,
 			defaultCombo: {
 				type: 'cCircle',
 				labelCfg: {
