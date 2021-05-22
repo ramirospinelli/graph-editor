@@ -133,7 +133,8 @@ class editorStore {
         }
     }
 
-	@action changeColor = (nodeId) => {
+	@action changeColor = (nodeId, value) => {
+		console.log(nodeId, value)
         if (nodeId) {
 			this.graph.update(nodeId, {
 				labelCfg: {
@@ -145,7 +146,10 @@ class editorStore {
 					fill: 'blue',
 					stroke: 'red'
 				}
-            }, true)
+			}, true)
+			const item = this.graph.findById(nodeId)
+            this.graph.setItemState(item, "selected", false)
+			this.graph.setItemState(item, "unselected", true)
             this.graph.paint()
             this.graph.fitView()
         }
@@ -155,7 +159,11 @@ class editorStore {
         if (nodeId) {
 			this.graph.update(nodeId,{
 				label: 'ramiro'
-            }, true)
+			}, true)
+			
+			const item = this.graph.findById(nodeId)
+            this.graph.setItemState(item, "selected", false)
+			this.graph.setItemState(item, "unselected", true)
             
             this.graph.paint()
             this.graph.fitView()

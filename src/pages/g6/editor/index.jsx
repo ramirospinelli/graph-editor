@@ -153,7 +153,6 @@ G6.registerCombo(
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
-			console.log(evt)
 		  let header;
 		  if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
 			header = 'Canvas ContextMenu';
@@ -169,9 +168,9 @@ G6.registerCombo(
 		  </ul>`;
 		},
 		handleMenuClick: (target, item) => {
-			console.log(item)
 			switch (target.id) {
 				case 'edit-label': {
+					//setShowNodeContextMenu(true)
 					changeLabel(item._cfg.id)
 					break;
 				}
@@ -183,9 +182,6 @@ G6.registerCombo(
 					break;
 				}
 			}
-			/*graph.update(item.cfg.id,{
-				label: 'ramiro'
-            }, true)*/
 		},
 		offsetX: nodeContextMenuX,
 		offsetY: nodeContextMenuY,
@@ -278,45 +274,33 @@ G6.registerCombo(
 
         graph.on("node:click", (evt) => {
             const { item } = evt
-            const model = item.getModel()
-			const mode = graph.getCurrentMode()
-			graph.setItemState(item, "selected", true)
-			graph.setItemState(item, "unselected", false)
-			setCurrentId(model.id)
-			setCurrentType("node")
-            if (mode === "edit") {
-                // 编辑模式 显示红框
-                // 清除其他节点的选中状态
-                if (editorStore.currentId && editorStore.currentId !== model.id) {
-                    const oldItem = graph.findById(editorStore.currentId)
-                    oldItem && graph.clearItemStates(oldItem, ["selected"])
-                }
-                const { states } = item._cfg
+			const model = item.getModel()
+
+			const { states } = item._cfg
                 if (states.includes("selected")) {
-                    graph.setItemState(item, "selected", false)
-                    graph.setItemState(item, "unselected", true)
+                    graph.setItemState(item, "selected", true)
+                    graph.setItemState(item, "unselected", false)
                     setCurrentId(null)
                     setCurrentType(null)
                 } else {
-                    graph.setItemState(item, "selected", true)
-                    graph.setItemState(item, "unselected", false)
+                    graph.setItemState(item, "selected", false)
+                    graph.setItemState(item, "unselected", true)
                     setCurrentId(model.id)
                     setCurrentType("node")
-                }
-            }
+				}
+			
         })
 
         graph.on("node:dblclick", (evt) => {
             const { item } = evt
             const model = item.getModel()
             const mode = graph.getCurrentMode()
-            if (mode === "edit") {
                 // 显示input编辑框  设置目标节点id 类型 初始化input样式
                 textShow()
                 setCurrentId(model.id)
                 setCurrentType("node")
                 initEdit(model, "node")
-            }
+            
         })
 
         graph.on("node:drag", (evt) => {
@@ -366,10 +350,9 @@ G6.registerCombo(
 			setCurrentId(model.id)
 			setNodeContextMenuX(point.x)
 			setNodeContextMenuY(point.y)
-			setShowNodeContextMenu(true)
 		})
 		
-		graph.on('node:mouseleave', () => {
+		graph.on('node:mouseleave', (evt) => {
 			setShowNodeContextMenu(false)
 		  })
 
@@ -472,7 +455,6 @@ G6.registerCombo(
                             !editFlag && styles.inputEditHidden
                         )}
                         onChange={textChange}
-                        onBlur={textShow}
 					/>
 					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} /> }
                 </div>
