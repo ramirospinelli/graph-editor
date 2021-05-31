@@ -38,7 +38,7 @@ insertCss(`
 
 const Editor = () => {
     const inputEditRef = useRef()
-    const graphRef = useRef(null)
+	const graphRef = useRef(null)	
 
     const { editorStore } = useStores()
     const {
@@ -52,17 +52,18 @@ const Editor = () => {
         addChildItem,
 		setTreeData,
 		changeLabel,
-		changeColor
+		changeColor,
+		editEdge
     } = editorStore
 
 	const collapseIcon = (x, y, r) => {
-  return [
-    ['M', x - r, y],
-    ['a', r, r, 0, 1, 0, r * 2, 0],
-    ['a', r, r, 0, 1, 0, -r * 2, 0],
-    ['M', x - r + 4, y],
-    ['L', x - r + 2 * r - 4, y],
-  ];
+		return [
+			['M', x - r, y],
+			['a', r, r, 0, 1, 0, r * 2, 0],
+			['a', r, r, 0, 1, 0, -r * 2, 0],
+			['M', x - r + 4, y],
+			['L', x - r + 2 * r - 4, y],
+		];
 };
 const expandIcon = (x, y, r) => {
   return [
@@ -137,22 +138,12 @@ G6.registerCombo(
 	const [editValue, setEditValue] = useState("")
 	const [showNodeContextMenu, setShowNodeContextMenu] = useState(false)
   	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
-  	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
-
-    const textShow = () => {
-        // 编辑文本是否显示
-        setEditFlag(!editFlag)
-    }
-
-    const textChange = (event) => {
-        // 设置改变的文本内容
-		const val = event.target.value
-		console.log(val)
-        setEditValue(val)
-    }
+	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
+	const [selectedNodeId, setSelectedNodeId] = useState('')
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
+			setSelectedNodeId(evt.item._cfg.id)
 		  let header;
 		  if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
 			header = 'Canvas ContextMenu';
@@ -163,19 +154,18 @@ G6.registerCombo(
 		  return `
 		  <h3>${header}</h3>
 		  <ul>
-			<li id='edit-label' styles={{cursor: 'pointer'}}>Edit Label</li>
-			<li id='edit-color'>Edit Color</li>
+			<li id='edit-label' styles={{cursor: 'pointer'}}>Edit Color</li>
 		  </ul>`;
 		},
 		handleMenuClick: (target, item) => {
 			switch (target.id) {
 				case 'edit-label': {
-					//setShowNodeContextMenu(true)
-					changeLabel(item._cfg.id)
+					setShowNodeContextMenu(true)
 					break;
 				}
 				case 'edit-color': {
-					changeColor(item._cfg.id)
+					editEdge('1')
+					//changeColor(item._cfg.id)
 					break;
 				}
 				default: {
@@ -190,12 +180,16 @@ G6.registerCombo(
 	
 	const toolbar = new G6.ToolBar({});
 
+	const minimap = new G6.Minimap({
+		size: [300, 300],
+	  });
+
     const setGraphObj = () => {
         const graph = new G6.Graph({
             container: 'container',
             width: 1200,
 			height: 600,
-			plugins: [contextMenu, toolbar],
+			plugins: [contextMenu, toolbar, minimap],
 			//groupByTypes: false,
 			fitView: true,
 			enabledStack: true,
@@ -212,18 +206,22 @@ G6.registerCombo(
 				},
 			},
 			modes: {
-				default: ['drag-combo', 'drag-node', 'drag-canvas', 'click-select'],
+				default: ['drag-combo', 'drag-node', 'drag-canvas', 'click-select', {
+					type: 'create-edge',
+					key: 'shift', 
+				  }],
 			  },
             defaultNode: {
                 type: "rect",
                 size: [80, 30]
             },
-            defaultEdge: {
-                type: "line",
-                style: {
-                    // endArrow: true,
-                }
-            },
+			defaultEdge: {
+				type: 'line-dash',
+				style: {
+				  lineWidth: 2,
+				  stroke: '#bae7ff',
+				},
+			  },
             nodeStateStyles: {
                 selected: {
                     stroke: "blue"
@@ -234,6 +232,10 @@ G6.registerCombo(
 				linkDistance: 100,
 			},
 		});
+
+		graph.on('aftercreateedge', (e) => {
+			graph.save().edges;
+		  });
 		
 		graph.on('combo:click', (e) => {
 			if (e.target.get('name') === 'combo-marker-shape') {
@@ -273,35 +275,45 @@ G6.registerCombo(
 		  });
 
         graph.on("node:click", (evt) => {
-            const { item } = evt
-			const model = item.getModel()
-
+			const { item } = evt
+			
 			const { states } = item._cfg
                 if (states.includes("selected")) {
                     graph.setItemState(item, "selected", true)
                     graph.setItemState(item, "unselected", false)
                     setCurrentId(null)
                     setCurrentType(null)
-                } else {
+				} else {
+					const model = item.getModel()
                     graph.setItemState(item, "selected", false)
                     graph.setItemState(item, "unselected", true)
                     setCurrentId(model.id)
                     setCurrentType("node")
-				}
-			
-        })
+				}				
+		})
+		
+		graph.on('edge:click', (evt) => {
+			const { item } = evt
+			const { states } = item._cfg
+			const model = item.getModel()
+			console.log(item)
+			graph.update(item, {
+				style: {
+					stroke: 'red'
+				},
+			}, true)
 
-        graph.on("node:dblclick", (evt) => {
-            const { item } = evt
-            const model = item.getModel()
-            const mode = graph.getCurrentMode()
-                // 显示input编辑框  设置目标节点id 类型 初始化input样式
-                textShow()
-                setCurrentId(model.id)
-                setCurrentType("node")
-                initEdit(model, "node")
-            
-        })
+			graph.update(item, model)
+            graph.paint()
+			/*if (states.includes("active")) {
+				console.log('selected')
+				graph.setItemState(item, "selected", true)
+				graph.setItemState(item, "unselected", false)
+			} else {
+				graph.setItemState(item, "selected", false)
+				graph.setItemState(item, "unselected", true)
+			}*/		
+			})
 
         graph.on("node:drag", (evt) => {
             const { item, clientX, clientY } = evt
@@ -311,35 +323,35 @@ G6.registerCombo(
             item.updatePosition(point)
 
             if (model.id !== "1") {
-                let source = item.getNeighbors("source")
+				let source = item.getNeighbors("source")
+				
                 source = source[0]
-                const targetEdges = source.getEdges()
-                // 需要调整连接点的边
-                let tartgetEdge = targetEdges.filter(i => {
-                    const m = i.getModel()
-                    if (m.target === model.id) {
-                        return i
-                    }
+				const targetEdges = source.getEdges()
+				console.log(targetEdges)
+				let tartgetEdge = targetEdges.filter(i => {
+					if (i.getModel()) {
+						
+					const m = i.getModel()
+					if (m.target === model.id) {
+						return i
+					}
+					}
                 })
                 tartgetEdge = tartgetEdge[0]
-                // 调整边的model
                 const tM = tartgetEdge.getModel()
-                // 调整边连接的终点坐标
                 const tEndPoint = tM.endPoint
-                // 调整边源节点  tM.sourceNode存在 但是获取不到 玄学
                 const sNode = graph.findById(tM.source)
-                // 获取源节点离终点坐标 最近的锚点
                 const sLinkPoint = sNode.getLinkPoint(tEndPoint)
-                // 获取最近的锚点的索引
-                const sAnchorIndex = sLinkPoint.anchorIndex
-                // 更新目标边的源锚点索引
+				const sAnchorIndex = sLinkPoint.anchorIndex
+				console.log(tartgetEdge)
                 graph.update(tartgetEdge, {
-                    sourceAnchor: sAnchorIndex
+					sourceAnchor: sAnchorIndex,
                 }, true)
             }
             graph.update(item, model)
             graph.paint()
 		})
+
 		
 		graph.on('node:contextmenu', evt => {
 			console.log(evt)
@@ -351,9 +363,23 @@ G6.registerCombo(
 			setNodeContextMenuX(point.x)
 			setNodeContextMenuY(point.y)
 		})
+
+		graph.on('node:mouseenter', (e) => {
+			graph.setItemState(e.item, 'active', true);
+		  });
 		
-		graph.on('node:mouseleave', (evt) => {
+		graph.on('node:mouseleave', (e) => {
 			setShowNodeContextMenu(false)
+			graph.setItemState(e.item, 'active', false);
+		})
+		
+		graph.on('edge:mouseenter', (e) => {
+			graph.setItemState(e.item, 'active', true);
+		  });
+		
+		graph.on('edge:mouseleave', (e) => {
+			setShowNodeContextMenu(false)
+			graph.setItemState(e.item, 'active', false);
 		  })
 
         graphRef.current = graph
@@ -445,18 +471,8 @@ G6.registerCombo(
 
     return (
         <div className={styles.editorContainer}>
-            <Toolbar />
                 <div className={styles.editBox} id={"container"} >
-                    <input
-                        type="text"
-                        ref={inputEditRef}
-                        className={classNames(
-                            styles.inputEdit,
-                            !editFlag && styles.inputEditHidden
-                        )}
-                        onChange={textChange}
-					/>
-					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} /> }
+					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} nodeId={selectedNodeId} /> }
                 </div>
         </div>
 

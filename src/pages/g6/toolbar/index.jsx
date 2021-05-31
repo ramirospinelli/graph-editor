@@ -17,7 +17,7 @@ const Toolbar = () => {
 	const fontColorIconRef = useRef()
 	const strokeColorIconRef = useRef()
     const { editorStore } = useStores()
-    const { changeLabelCfg, changeStrokeCfg, setCurrentLayout } = editorStore
+    const { changeLabelCfg, changeLabel, changeStrokeCfg, setCurrentLayout, changeColor } = editorStore
 
     const [layoutVisible, setLayoutVisible] = useState(false)
     const [menuVisible, setMenuVisible] = useState(false)
@@ -27,40 +27,27 @@ const Toolbar = () => {
     const [inputValue, setInputValue] = useState(null)
 
     const fontColorChange = (e) => {
-        if (!editorStore.currentId) {
-            message.warning("Cambie a modo edicion y seleccione el nodo destino")
-            return
-        }
         const value = e.target.value
         fontColorIconRef.current.style.color = value
         setCurrentFontColor(value)
-        changeLabelCfg(value, "fill")
+		//changeLabelCfg(value, "fill")
+		
+		changeColor('1', value)
 	}
 	
 	const strokeColorChange = (e) => {
-        if (!editorStore.currentId) {
-            message.warning("Cambie a modo edicion y seleccione el nodo destino")
-            return
-        }
         const value = e.target.value
         strokeColorIconRef.current.style.color = value
         setCurrentStrokeColor(value)
-        changeStrokeCfg(value, "stroke")
+        //changeStrokeCfg(value, "stroke")
+		changeLabel(1)
     }
 
     const showFontColor = () => {
-        if (!editorStore.currentId) {
-            message.warning("Cambie a modo edicion y seleccione el nodo destino")
-            return
-        }
 		fontColorRef.current.input.click()
 	}
 	
 	const showStrokeColor = () => {
-        if (!editorStore.currentId) {
-            message.warning("Cambie a modo edicion y seleccione el nodo destino")
-            return
-        }
 		strokeColorRef.current.input.click()
     }
 

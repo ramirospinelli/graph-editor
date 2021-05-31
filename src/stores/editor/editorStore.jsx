@@ -119,9 +119,8 @@ class editorStore {
         this.graph.fitView()
     }
 
-    @action changeLabelCfg = (value, type) => {
-		if (this.currentId) {
-            this.graph.update(this.currentId,{
+    @action changeLabelCfg = (value, type) => {	
+            this.graph.update(1,{
                 labelCfg: {
                     style: {
 						[type]: value,
@@ -130,24 +129,24 @@ class editorStore {
             }, true)
             this.graph.paint()
             this.graph.fitView()
-        }
     }
 
 	@action changeColor = (nodeId, value) => {
 		console.log(nodeId, value)
+		const item = this.graph.findById(nodeId)
+		
         if (nodeId) {
-			this.graph.update(nodeId, {
+			this.graph.update(item._cfg.id, {
 				labelCfg: {
                     style: {
-						fill: 'red',
+						fill: value,
                     }
 				},
 				style: {
-					fill: 'blue',
-					stroke: 'red'
+					fill: 'white',
+					stroke: value
 				}
 			}, true)
-			const item = this.graph.findById(nodeId)
             this.graph.setItemState(item, "selected", false)
 			this.graph.setItemState(item, "unselected", true)
             this.graph.paint()
@@ -168,7 +167,21 @@ class editorStore {
             this.graph.paint()
             this.graph.fitView()
         }
-    }
+	}
+	
+	@action editEdge = (nodeId) => {
+		const item = this.graph.findById(nodeId)
+		console.log(item)
+		if (nodeId) {
+			this.graph.update('1', {
+				edges: {
+					style: {
+						fill: 'red'
+					}
+				}
+			}, true)
+		}
+	}
 
     @action setEdit = flag => {
         this.edit = flag
@@ -270,14 +283,11 @@ class editorStore {
     }
 
     @action changeModeToEdit = () => {
-        // 点击编辑按钮时
         if (this.edit) {
-            // 清除之前选中的节点选中状态
             if (this.currentId) {
                 const oldItem = this.graph.findById(this.currentId)
                 this.graph.clearItemStates(oldItem, ["selected"])
             }
-            // 重设为默认状态
             this.graph.setMode("default")
             this.edit = false
         } else {

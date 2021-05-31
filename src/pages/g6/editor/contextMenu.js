@@ -1,33 +1,20 @@
 import 'antd/es/menu/style/css'
 
-import { Dropdown, Input, Menu, Popover, message } from "antd"
-
+import { Input } from "antd"
 import React from 'react'
-import classNames from "classnames"
-import styles from "./index.module.less"
 import { useStores } from "../../../utils/mobx";
 
-const { SubMenu } = Menu
-
-const NodeContextMenu = ({ x = -300, y = 0, nodeId = 0 }) => {
+const NodeContextMenu = ({ x = -300, y = 0, nodeId }) => {
 	const { editorStore } = useStores()
-    const {
-		changeColor
-	} = editorStore
-
-	const handleChangeColor = (value) => {
-		
-		changeColor(1, value)
-	}
+	const { changeColor } = editorStore
 	
 	return (
-		<div>
+		<div style={{position: 'relative', top: '-85%', left: '90%'}}>
 		<Input
                 type={"color"}
-				onChange={(e) => handleChangeColor(e.target.value)}
-				//className={styles.colorInput}
-				style={{width: '5%'}}
-            />
+				onChange={(e) => changeColor(nodeId, e.target.value)}
+				style={{ width: '5%' }}
+			/>
 			</div>
 	)
 }
