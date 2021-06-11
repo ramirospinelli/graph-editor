@@ -37,24 +37,24 @@ insertCss(`
 `);
 
 const Editor = () => {
-    const inputEditRef = useRef()
-	const graphRef = useRef(null)	
+	const inputEditRef = useRef()
+	const graphRef = useRef(null)
 
-    const { editorStore } = useStores()
-    const {
-        setEditorGraph,
-        setCurrentType,
-        treeData,
-        setData,
-        setCurrentId,
-        currentId,
-        fontSize,
-        addChildItem,
+	const { editorStore } = useStores()
+	const {
+		setEditorGraph,
+		setCurrentType,
+		treeData,
+		setData,
+		setCurrentId,
+		currentId,
+		fontSize,
+		addChildItem,
 		setTreeData,
 		changeLabel,
 		changeColor,
 		editEdge
-    } = editorStore
+	} = editorStore
 
 	const collapseIcon = (x, y, r) => {
 		return [
@@ -64,94 +64,38 @@ const Editor = () => {
 			['M', x - r + 4, y],
 			['L', x - r + 2 * r - 4, y],
 		];
-};
-const expandIcon = (x, y, r) => {
-  return [
-    ['M', x - r, y],
-    ['a', r, r, 0, 1, 0, r * 2, 0],
-    ['a', r, r, 0, 1, 0, -r * 2, 0],
-    ['M', x - r + 4, y],
-    ['L', x - r + 2 * r - 4, y],
-    ['M', x - r + r, y - r + 4],
-    ['L', x, y + r - 4],
-  ];
-};
+	};
+	const expandIcon = (x, y, r) => {
+		return [
+			['M', x - r, y],
+			['a', r, r, 0, 1, 0, r * 2, 0],
+			['a', r, r, 0, 1, 0, -r * 2, 0],
+			['M', x - r + 4, y],
+			['L', x - r + 2 * r - 4, y],
+			['M', x - r + r, y - r + 4],
+			['L', x, y + r - 4],
+		];
+	};
 
-G6.registerCombo(
-	'cCircle',
-	{
-	  drawShape: function draw(cfg, group) {
-		const self = this;
-		// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
-		const style = self.getShapeStyle(cfg);
-		// Add a circle shape as keyShape which is the same as the extended 'circle' type Combo
-		const circle = group.addShape('circle', {
-		  attrs: {
-			...style,
-			x: 0,
-			y: 0,
-			r: style.r,
-		  },
-		  draggable: true,
-		  name: 'combo-keyShape',
-		});
-		// Add the marker on the bottom
-		const marker = group.addShape('marker', {
-		  attrs: {
-			...style,
-			fill: '#fff',
-			opacity: 1,
-			x: 0,
-			y: style.r,
-			r: 10,
-			symbol: collapseIcon,
-		  },
-		  draggable: true,
-		  name: 'combo-marker-shape',
-		});
-  
-		return circle;
-	  },
-	  // Define the updating logic for the marker
-	  afterUpdate: function afterUpdate(cfg, combo) {
-		const self = this;
-		// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
-		const style = self.getShapeStyle(cfg);
-		const group = combo.get('group');
-		// Find the marker shape in the graphics group of the Combo
-		const marker = group.find((ele) => ele.get('name') === 'combo-marker-shape');
-		// Update the marker shape
-		marker.attr({
-		  x: 0,
-		  y: style.r,
-		  // The property 'collapsed' in the combo data represents the collapsing state of the Combo
-		  // Update the symbol according to 'collapsed'
-		  symbol: cfg.collapsed ? expandIcon : collapseIcon,
-		});
-	  },
-	},
-	'circle',
-  );
-
-    const [graph, setGraph] = useState(graphRef.current) // 设置画布
-    const [editFlag, setEditFlag] = useState(false)
+	const [graph, setGraph] = useState(graphRef.current) // 设置画布
+	const [editFlag, setEditFlag] = useState(false)
 	const [editValue, setEditValue] = useState("")
 	const [showNodeContextMenu, setShowNodeContextMenu] = useState(false)
-  	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
+	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
 	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
 	const [selectedNodeId, setSelectedNodeId] = useState('')
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
 			setSelectedNodeId(evt.item._cfg.id)
-		  let header;
-		  if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
-			header = 'Canvas ContextMenu';
-		  } else if (evt.item) {
-			const itemType = evt.item.getType();
-			header = `${itemType.toUpperCase()} ContextMenu`;
-		  }
-		  return `
+			let header;
+			if (evt.target && evt.target.isCanvas && evt.target.isCanvas()) {
+				header = 'Canvas ContextMenu';
+			} else if (evt.item) {
+				const itemType = evt.item.getType();
+				header = `${itemType.toUpperCase()} ContextMenu`;
+			}
+			return `
 		  <h3>${header}</h3>
 		  <ul>
 			<li id='edit-label' styles={{cursor: 'pointer'}}>Edit Color</li>
@@ -182,7 +126,119 @@ G6.registerCombo(
 
 	const minimap = new G6.Minimap({
 		size: [300, 300],
-	  });
+	});
+	
+	G6.registerCombo(
+		'cRect',
+		{
+		  drawShape: function drawShape(cfg, group) {
+			const self = this;
+			// Get the padding from the configuration
+			cfg.padding = cfg.padding || [20, 20, 20, 20];
+			// Get the shape's style, where the style.width and style.height correspond to the width and height in the figure of Illustration of Built-in Rect Combo
+				const style = self.getShapeStyle(cfg);
+				style.width = 80
+				style.height = 20
+			// Add a rect shape as the keyShape which is the same as the extended rect Combo
+			const rect = group.addShape('rect', {
+			  attrs: {
+				...style,
+				x: -style.width / 2 - (cfg.padding[3] - cfg.padding[1]) / 2,
+				y: -style.height / 2 - (cfg.padding[0] - cfg.padding[2]) / 2,
+			  },
+			  draggable: true,
+			  name: 'combo-keyShape',
+			});
+			// Add the circle on the right
+			group.addShape('marker', {
+			  attrs: {
+				...style,
+				opacity: 1,
+				// cfg.style.width and cfg.style.heigth correspond to the innerWidth and innerHeight in the figure of Illustration of Built-in Rect Combo
+				x: cfg.style.width / 2 + cfg.padding[1],
+				y: (cfg.padding[2] - cfg.padding[0]) / 2,
+				r: 10,
+				symbol: collapseIcon,
+			  },
+			  draggable: true,
+			  name: 'combo-marker-shape',
+			});
+			return rect;
+		  },
+		  // Define the updating logic of the right circle
+		  afterUpdate: function afterUpdate(cfg, combo) {
+			const group = combo.get('group');
+			// Find the circle shape in the graphics group of the Combo by name
+			const marker = group.find((ele) => ele.get('name') === 'combo-marker-shape');
+			// Update the position of the right circle
+			marker.attr({
+			  // cfg.style.width and cfg.style.heigth correspond to the innerWidth and innerHeight in the figure of Illustration of Built-in Rect Combo
+			  x: cfg.style.width / 2 + cfg.padding[1],
+			  y: (cfg.padding[2] - cfg.padding[0]) / 2,
+			  // The property 'collapsed' in the combo data represents the collapsing state of the Combo
+			  // Update the symbol according to 'collapsed'
+			  symbol: cfg.collapsed ? expandIcon : collapseIcon,
+			});
+		  },
+		},
+		'rect',
+	);
+	
+	G6.registerCombo(
+		'cCircle',
+		{
+		  drawShape: function draw(cfg, group) {
+			const self = this;
+			// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
+			const style = self.getShapeStyle(cfg);
+			// Add a circle shape as keyShape which is the same as the extended 'circle' type Combo
+			const circle = group.addShape('circle', {
+			  attrs: {
+				...style,
+				x: 0,
+				y: 0,
+				r: style.r,
+			  },
+			  draggable: true,
+			  name: 'combo-keyShape',
+			});
+			// Add the marker on the bottom
+			const marker = group.addShape('marker', {
+			  attrs: {
+				...style,
+				fill: '#fff',
+				opacity: 1,
+				x: 0,
+				y: style.r,
+				r: 10,
+				symbol: collapseIcon,
+			  },
+			  draggable: true,
+			  name: 'combo-marker-shape',
+			});
+	  
+			return circle;
+		  },
+		  // Define the updating logic for the marker
+		  afterUpdate: function afterUpdate(cfg, combo) {
+			const self = this;
+			// Get the shape style, where the style.r corresponds to the R in the Illustration of Built-in Rect Combo
+			const style = self.getShapeStyle(cfg);
+			const group = combo.get('group');
+			// Find the marker shape in the graphics group of the Combo
+			const marker = group.find((ele) => ele.get('name') === 'combo-marker-shape');
+			// Update the marker shape
+			marker.attr({
+			  x: 0,
+			  y: style.r,
+			  // The property 'collapsed' in the combo data represents the collapsing state of the Combo
+			  // Update the symbol according to 'collapsed'
+			  symbol: cfg.collapsed ? expandIcon : collapseIcon,
+			});
+		  },
+		},
+		'circle',
+	  );
 
     const setGraphObj = () => {
         const graph = new G6.Graph({
@@ -194,16 +250,7 @@ G6.registerCombo(
 			fitView: true,
 			enabledStack: true,
 			defaultCombo: {
-				type: 'cCircle',
-				labelCfg: {
-				refY: 2,
-				},
-			},
-			comboStateStyles: {
-				dragenter: {
-				lineWidth: 4,
-				stroke: '#FE9797',
-				},
+				type: "cRect",
 			},
 			modes: {
 				default: ['drag-combo', 'drag-node', 'drag-canvas', 'click-select', {
@@ -212,9 +259,9 @@ G6.registerCombo(
 				  }],
 			  },
             defaultNode: {
-                type: "rect",
-                size: [80, 30]
-            },
+				type: "rect",
+				size: [80, 30]
+			},
 			defaultEdge: {
 				type: 'line-dash',
 				style: {
@@ -238,6 +285,7 @@ G6.registerCombo(
 		  });
 		
 		graph.on('combo:click', (e) => {
+			setSelectedNodeId(e.item._cfg.id)
 			if (e.target.get('name') === 'combo-marker-shape') {
 			  // graph.collapseExpandCombo(e.item.getModel().id);
 			  graph.collapseExpandCombo(e.item);
@@ -260,6 +308,7 @@ G6.registerCombo(
 		  graph.on('combo:dragenter', (e) => {
 			graph.setItemState(e.item, 'dragenter', true);
 		  });
+		
 		  graph.on('combo:dragleave', (e) => {
 			graph.setItemState(e.item, 'dragenter', false);
 		  });
@@ -292,28 +341,6 @@ G6.registerCombo(
 				}				
 		})
 		
-		graph.on('edge:click', (evt) => {
-			const { item } = evt
-			const { states } = item._cfg
-			const model = item.getModel()
-			console.log(item)
-			graph.update(item, {
-				style: {
-					stroke: 'red'
-				},
-			}, true)
-
-			graph.update(item, model)
-            graph.paint()
-			/*if (states.includes("active")) {
-				console.log('selected')
-				graph.setItemState(item, "selected", true)
-				graph.setItemState(item, "unselected", false)
-			} else {
-				graph.setItemState(item, "selected", false)
-				graph.setItemState(item, "unselected", true)
-			}*/		
-			})
 
         graph.on("node:drag", (evt) => {
             const { item, clientX, clientY } = evt
@@ -369,7 +396,7 @@ G6.registerCombo(
 		  });
 		
 		graph.on('node:mouseleave', (e) => {
-			setShowNodeContextMenu(false)
+			//setShowNodeContextMenu(false)
 			graph.setItemState(e.item, 'active', false);
 		})
 		
@@ -378,7 +405,7 @@ G6.registerCombo(
 		  });
 		
 		graph.on('edge:mouseleave', (e) => {
-			setShowNodeContextMenu(false)
+			//setShowNodeContextMenu(false)
 			graph.setItemState(e.item, 'active', false);
 		  })
 

@@ -83,7 +83,7 @@ class editorStore {
 			}
 		],
 		combos: [
-			{ id: 'combo1', label: 'Combo 1', parentId: 'combo2' },
+			{ id: 'combo1', label: 'Combo 1'},
 			{ id: 'combo2', label: 'Combo 2' },
 			{ id: 'combo3', label: 'Combo 3'},
 		  ],
