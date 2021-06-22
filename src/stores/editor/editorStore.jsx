@@ -15,56 +15,21 @@ class editorStore {
 		nodes: [{
 			id: "1",
 			label: "node-1",
-			labelCfg: {
-				style: {
-					fontSize: this.defaultFontSize
-				}
-			},
-			style: {
-				radius: 6
-			},
-			anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
 			comboId: "combo1"
 		},
 		{
 			id: '2',
 			label: "node-2",
-			labelCfg: {
-				style: {
-					fontSize: this.defaultFontSize
-				}
-			},
-			style: {
-				radius: 6,
-			},
-			anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
 			comboId: "combo1"
 			},
 		{
 				id: '3',
 				label: "node-3",
-				labelCfg: {
-					style: {
-						fontSize: this.defaultFontSize
-					}
-				},
-				style: {
-					radius: 6,
-				},
 				comboId: "combo3"
 			},
 			{
 				id: '4',
 				label: "node-4",
-				labelCfg: {
-					style: {
-						fontSize: this.defaultFontSize
-					}
-				},
-				style: {
-					radius: 6,
-				},
-				anchorPoints: [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]],
 				comboId: "combo2"
 			}],
 		edges: [
@@ -83,9 +48,9 @@ class editorStore {
 			}
 		],
 		combos: [
-			{ id: 'combo1', label: 'Combo 1'},
-			{ id: 'combo2', label: 'Combo 2' },
-			{ id: 'combo3', label: 'Combo 3'},
+			{ id: 'combo1', label: 'Combo 1', labelCfg: { position: 'center' }},
+			{ id: 'combo2', label: 'Combo 2', labelCfg: { position: 'center' }},
+			{ id: 'combo3', label: 'Combo 3', labelCfg: { position: 'center' }},
 		  ],
 	}
 
