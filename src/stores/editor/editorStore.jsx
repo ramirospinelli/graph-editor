@@ -13,48 +13,40 @@ class editorStore {
 	// 初始数据
 	@observable treeData = {
 		nodes: [{
-			id: "1",
-			label: "node-1",
-			comboId: "combo1"
+			id: "node1",
+			label: "node1",
 		},
 		{
-			id: '2',
-			label: "node-2",
-			comboId: "combo1"
+			id: 'node2',
+			label: "node2",
 			},
 		{
-				id: '3',
-				label: "node-3",
-				comboId: "combo3"
+				id: 'node3',
+				label: "node3",
 			},
 			{
-				id: '4',
-				label: "node-4",
-				comboId: "combo2"
+				id: 'node4',
+				label: "node4",
 			}],
 		edges: [
 			{
-				source: '1',
-				target: '2'
+				source: 'node1',
+				target: 'node2'
 			}, {
-				source: '2',
-				target: '3'
+				source: 'node2',
+				target: 'node3'
 			}, {
-				source: '3',
-				target: '4'
+				source: 'node3',
+				target: 'node4'
 			},{
-				source: '4',
-				target: '2'
+				source: 'node4',
+				target: 'node2'
 			}
 		],
-		combos: [
-			{ id: 'combo1', label: 'Combo 1', labelCfg: { position: 'center' }},
-			{ id: 'combo2', label: 'Combo 2', labelCfg: { position: 'center' }},
-			{ id: 'combo3', label: 'Combo 3', labelCfg: { position: 'center' }},
-		  ],
+		combos:[]
 	}
 
-    @action setTreeData = (data) => {
+	@action setTreeData = (data) => {
         this.treeData = data
     }
 
@@ -84,18 +76,6 @@ class editorStore {
         this.graph.fitView()
     }
 
-    @action changeLabelCfg = (value, type) => {	
-            this.graph.update(1,{
-                labelCfg: {
-                    style: {
-						[type]: value,
-                    }
-				}
-            }, true)
-            this.graph.paint()
-            this.graph.fitView()
-    }
-
 	@action changeColor = (nodeId, value) => {
 		console.log(nodeId, value)
 		const item = this.graph.findById(nodeId)
@@ -115,42 +95,8 @@ class editorStore {
             this.graph.setItemState(item, "selected", false)
 			this.graph.setItemState(item, "unselected", true)
             this.graph.paint()
-            this.graph.fitView()
-        }
-    }
-
-	@action changeLabel = (nodeId) => {
-        if (nodeId) {
-			this.graph.update(nodeId,{
-				label: 'ramiro'
-			}, true)
-			
-			const item = this.graph.findById(nodeId)
-            this.graph.setItemState(item, "selected", false)
-			this.graph.setItemState(item, "unselected", true)
-            
-            this.graph.paint()
-            this.graph.fitView()
         }
 	}
-	
-	@action editEdge = (nodeId) => {
-		const item = this.graph.findById(nodeId)
-		console.log(item)
-		if (nodeId) {
-			this.graph.update('1', {
-				edges: {
-					style: {
-						fill: 'red'
-					}
-				}
-			}, true)
-		}
-	}
-
-    @action setEdit = flag => {
-        this.edit = flag
-    }
 
     @action setEditorGraph = (graph) => {
         this.graph = graph
@@ -158,14 +104,6 @@ class editorStore {
 
     @action setData = (data) => {
         this.data = data
-    }
-
-    @action setCurrentType = (type) => {
-        this.currentType = type
-    }
-
-    @action setCurrentId = (id) => {
-        this.currentId = id
     }
 
     @action addItem = (target) => {
@@ -245,21 +183,7 @@ class editorStore {
         this.setTreeData(this.graph.findDataById("1"))
         this.graph.paint()
         this.graph.fitView()
-    }
-
-    @action changeModeToEdit = () => {
-        if (this.edit) {
-            if (this.currentId) {
-                const oldItem = this.graph.findById(this.currentId)
-                this.graph.clearItemStates(oldItem, ["selected"])
-            }
-            this.graph.setMode("default")
-            this.edit = false
-        } else {
-            this.graph.setMode("edit")
-            this.edit = true
-        }
-    }
+    }    
 }
 
 export default new editorStore();

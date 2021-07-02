@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+import { Input, message } from "antd"
 import React, { useEffect, useRef, useState } from "react"
 
 import G6 from "../register"
@@ -9,7 +10,7 @@ import Toolbar from "../toolbar"
 import classNames from "classnames"
 import { cloneDeep } from "lodash"
 import insertCss from 'insert-css';
-import { message } from "antd"
+import nodes from "../register/nodes"
 import styles from "./index.module.less"
 import { useStores } from "../../../utils/mobx";
 
@@ -46,14 +47,10 @@ const Editor = () => {
 		setCurrentType,
 		treeData,
 		setData,
-		setCurrentId,
 		currentId,
-		fontSize,
 		addChildItem,
 		setTreeData,
-		changeLabel,
 		changeColor,
-		editEdge
 	} = editorStore
 
 	const collapseIcon = (x, y, r) => {
@@ -77,13 +74,12 @@ const Editor = () => {
 		];
 	};
 
-	const [graph, setGraph] = useState(graphRef.current) // 设置画布
-	const [editFlag, setEditFlag] = useState(false)
-	const [editValue, setEditValue] = useState("")
+	const [graph, setGraph] = useState(graphRef.current)
 	const [showNodeContextMenu, setShowNodeContextMenu] = useState(false)
 	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
 	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
 	const [selectedNodeId, setSelectedNodeId] = useState('')
+	const [selectedNodes, setSelectedNodes] = useState([])
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
@@ -99,23 +95,17 @@ const Editor = () => {
 		  <h3>${header}</h3>
 		  <ul>
 			<li id='edit-label' styles={{cursor: 'pointer'}}>Edit Color</li>
+			<li id='add-combo' styles={{cursor: 'pointer'}}>Add Combo</li>
 		  </ul>`;
 		},
 		handleMenuClick: (target, item) => {
 			switch (target.id) {
 				case 'edit-label': {
-					console.log('entro')
-					graph.downloadFullImage('tree-graph', {
-						backgroundColor: '#ddd',
-						padding: [30, 15, 15, 15],
-					  });
 					setShowNodeContextMenu(true)
 					break;
 				}
-				case 'edit-color': {
-					
-					editEdge('1')
-					//changeColor(item._cfg.id)
+				case 'add-combo': {
+				console.log('add combo')
 					break;
 				}
 				default: {
@@ -188,14 +178,29 @@ const Editor = () => {
 		'rect',
 	);
 
+	const addCombo = () => {
+		let comboId = ''
+		selectedNodes.forEach(node => {
+			comboId = comboId.concat(node._cfg.id)
+		}
+	)
+		const data = { ...treeData, combos: [...treeData.combos, { id: comboId, label: comboId, labelCfg: { position: 'center' } }] }
+		renderGraph(data)					
+		
+		const combo = graph.findById(comboId)
+		selectedNodes.forEach(selectedNode => {
+			const node = graph.findById(selectedNode._cfg.id)
+			combo.addChild(node)
+		})
+		graph.paint()
+}
+
     const setGraphObj = () => {
         const graph = new G6.Graph({
             container: 'container',
             width: 1200,
 			height: 600,
 			plugins: [contextMenu, toolbar, minimap],
-			//groupByTypes: false,
-			fitView: true,
 			enabledStack: true,
 			defaultCombo: {
 				type: "cRect",
@@ -253,16 +258,16 @@ const Editor = () => {
 		graph.on('combo:click', (e) => {
 			setSelectedNodeId(e.item._cfg.id)
 			if (e.target.get('name') === 'combo-marker-shape') {
-			  // graph.collapseExpandCombo(e.item.getModel().id);
 			  graph.collapseExpandCombo(e.item);
 			}
 		  });
 		  
-		  graph.on('combo:dragend', (e) => {
+		graph.on('combo:dragend', (e) => {
 			graph.getCombos().forEach((combo) => {
 			  graph.setItemState(combo, 'dragenter', false);
 			});
-		  });
+		});
+		
 		  graph.on('node:dragend', (e) => {
 			graph.getCombos().forEach((combo) => {
 			  graph.setItemState(combo, 'dragenter', false);
@@ -289,22 +294,19 @@ const Editor = () => {
 
 		graph.on("node:click", (evt) => {
 			const { item } = evt
+			const nodeId = item._cfg.id
 			
-			const { states } = item._cfg
-                if (states.includes("selected")) {
-                    graph.setItemState(item, "selected", true)
-                    graph.setItemState(item, "unselected", false)
-                    setCurrentId(null)
-                    setCurrentType(null)
-				} else {
-					const model = item.getModel()
-                    graph.setItemState(item, "selected", false)
-                    graph.setItemState(item, "unselected", true)
-                    setCurrentId(model.id)
-                    setCurrentType("node")
-				}				
-		})
-		
+			graph.setItemState(item, "selected", true)
+			setSelectedNodeId(nodeId)
+			const nodes = selectedNodes
+			if (!nodes.find(id => id === nodeId)) {
+				nodes.push(item)
+				setSelectedNodes(nodes)
+			}
+			if (nodes.length > 2) {
+				nodes.shift()
+			}
+		})		
 
         graph.on("node:drag", (evt) => {
             const { item, clientX, clientY } = evt
@@ -318,7 +320,6 @@ const Editor = () => {
 				
                 source = source[0]
 				const targetEdges = source.getEdges()
-				console.log(targetEdges)
 				let tartgetEdge = targetEdges.filter(i => {
 					if (i.getModel()) {
 						
@@ -334,7 +335,6 @@ const Editor = () => {
                 const sNode = graph.findById(tM.source)
                 const sLinkPoint = sNode.getLinkPoint(tEndPoint)
 				const sAnchorIndex = sLinkPoint.anchorIndex
-				console.log(tartgetEdge)
                 graph.update(tartgetEdge, {
 					sourceAnchor: sAnchorIndex,
                 }, true)
@@ -342,15 +342,13 @@ const Editor = () => {
             graph.update(item, model)
             graph.paint()
 		})
-
 		
 		graph.on('node:contextmenu', evt => {
-			console.log(evt)
 			const { item } = evt
 			const model = item.getModel()
 			const { x, y } = model
 			const point = graph.getCanvasByPoint(x, y)
-			setCurrentId(model.id)
+			setSelectedNodeId(model.id)
 			setNodeContextMenuX(point.x)
 			setNodeContextMenuY(point.y)
 		})
@@ -360,7 +358,6 @@ const Editor = () => {
 		  });
 		
 		graph.on('node:mouseleave', (e) => {
-			//setShowNodeContextMenu(false)
 			graph.setItemState(e.item, 'active', false);
 		})
 		
@@ -369,8 +366,14 @@ const Editor = () => {
 		  });
 		
 		graph.on('edge:mouseleave', (e) => {
-			//setShowNodeContextMenu(false)
 			graph.setItemState(e.item, 'active', false);
+		})
+		
+		graph.on('edge:click', (e) => {
+			const { item } = e
+			const model = item.getModel()
+			setSelectedNodeId(model.id)
+			graph.setItemState(e.item, 'selected', true);
 		  })
 
         graphRef.current = graph
@@ -382,17 +385,16 @@ const Editor = () => {
         setGraphObj() // 初始化画布
     }, [])
 
-    useEffect(() => {
-        if (graph && treeData) {
-            renderGraph() // 渲染画布
+	useEffect(() => {
+		if (graph && treeData) {
+            renderGraph(treeData) // 渲染画布
         }
     }, [treeData, graph])
 
-    const renderGraph = () => {
-        graph.clear(); // 清除画布
-        graph.data(treeData); // 传递数据
-        graph.render(); // 渲染画布
-        graph.fitView(); // 适应视图
+    const renderGraph = data => {
+        graph.clear(); 
+        graph.data(data);
+        graph.render(); 
     }
 
     const initEdit = (target, type) => {
@@ -415,9 +417,7 @@ const Editor = () => {
     }
 
     useEffect(() => {
-        // 当编辑文本的内容改变时  更新数据的label
-        // 根据文本的字数 修改节点的宽度
-        if (!editFlag && currentId) {
+        if (currentId) {
             const item = graph.findById(currentId)
             const model = item.getModel()
             const fontSize = model.labelCfg.style.fontSize
@@ -429,7 +429,7 @@ const Editor = () => {
                 setData(treeData)
             }
         }
-    }, [editFlag, currentId, editValue])
+    }, [currentId])
 
     document.onkeydown = (e) => {
         // 键盘按下操作
@@ -463,9 +463,16 @@ const Editor = () => {
     return (
 		<div className={styles.editorContainer}>
                 <div className={styles.editBox} id={"container"} >
-					{ showNodeContextMenu && <NodeContextMenu x={nodeContextMenuX} y={nodeContextMenuY} nodeId={selectedNodeId} /> }
-				<button  onClick={()=>graph.downloadImage()}>Download Image</button>
-                </div>
+				<div style={{ display:'flex', justifyContent: 'flex-end'}}>
+				 	<button onClick={() => graph.downloadImage()}>Download Image</button>
+					<button	onClick={() => addCombo()} disabled={selectedNodes.length !== 2}>Merge</button>
+						<Input
+								type={"color"}
+								onChange={(e) => changeColor(selectedNodeId, e.target.value)}
+								style={{ width: '5%' }}
+						/>
+					</div>
+				</div>
         </div>
     )
 }
