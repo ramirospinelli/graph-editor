@@ -80,6 +80,7 @@ const Editor = () => {
 	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
 	const [selectedNodeId, setSelectedNodeId] = useState('')
 	const [selectedNodes, setSelectedNodes] = useState([])
+	const [isButtonDisabled, setIsButtonDisabled] = useState(true)
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
@@ -182,8 +183,7 @@ const Editor = () => {
 		let comboId = ''
 		selectedNodes.forEach(node => {
 			comboId = comboId.concat(node._cfg.id)
-		}
-	)
+		})
 		const data = { ...treeData, combos: [...treeData.combos, { id: comboId, label: comboId, labelCfg: { position: 'center' } }] }
 		renderGraph(data)					
 		
@@ -192,8 +192,12 @@ const Editor = () => {
 			const node = graph.findById(selectedNode._cfg.id)
 			combo.addChild(node)
 		})
+
+		setSelectedNodes([])
+		setIsButtonDisabled(true)
+		graph.collapseCombo(comboId)
 		graph.paint()
-}
+	}
 
     const setGraphObj = () => {
         const graph = new G6.Graph({
@@ -266,13 +270,7 @@ const Editor = () => {
 			graph.getCombos().forEach((combo) => {
 			  graph.setItemState(combo, 'dragenter', false);
 			});
-		});
-		
-		  graph.on('node:dragend', (e) => {
-			graph.getCombos().forEach((combo) => {
-			  graph.setItemState(combo, 'dragenter', false);
-			});
-		  });
+		});		
 		  
 		  graph.on('combo:dragenter', (e) => {
 			graph.setItemState(e.item, 'dragenter', true);
@@ -294,54 +292,80 @@ const Editor = () => {
 
 		graph.on("node:click", (evt) => {
 			const { item } = evt
-			const nodeId = item._cfg.id
+			const {states, id} = item._cfg
+			let nodes = selectedNodes	
+
+			if (states.includes('selected')) {
+				graph.setItemState(item, "selected", true)
+				graph.setItemState(item, "unselected", false)
+
+				setSelectedNodeId(id)
 			
-			graph.setItemState(item, "selected", true)
-			setSelectedNodeId(nodeId)
-			const nodes = selectedNodes
-			if (!nodes.find(id => id === nodeId)) {
-				nodes.push(item)
-				setSelectedNodes(nodes)
+				if (!nodes.find(node => node._cfg.id === id)) {
+					nodes.push(item)
+				}
+				if (nodes.length > 2) {
+					nodes.shift()
+				}
+				if (nodes.length === 2) {
+					setIsButtonDisabled(false)
+				}
+				console.log(nodes)
+			} else {
+				graph.setItemState(item, "selected", false)
+				graph.setItemState(item, "unselected", true)
+				nodes = nodes.filter(node => node._cfg.id !== id)
 			}
-			if (nodes.length > 2) {
-				nodes.shift()
-			}
+			setSelectedNodes(nodes)			
+
+			nodes.forEach(selectedNode => {
+				const node = graph.findById(selectedNode._cfg.id)
+				
+				graph.setItemState(node, "selected", true)
+			})
 		})		
 
-        graph.on("node:drag", (evt) => {
+		graph.on("node:drag", (evt) => {
             const { item, clientX, clientY } = evt
             const point = graph.getPointByClient(clientX, clientY)
             const model = item.getModel()
             item.toFront()
             item.updatePosition(point)
-
-            if (model.id !== "1") {
-				let source = item.getNeighbors("source")
-				
-                source = source[0]
+          
+			let source = item.getNeighbors("source")
+			source = source[0]
+			
+			if (source) {				
 				const targetEdges = source.getEdges()
 				let tartgetEdge = targetEdges.filter(i => {
-					if (i.getModel()) {
-						
+					if (i.getModel()) {						
 					const m = i.getModel()
 					if (m.target === model.id) {
 						return i
 					}
 					}
-                })
-                tartgetEdge = tartgetEdge[0]
-                const tM = tartgetEdge.getModel()
-                const tEndPoint = tM.endPoint
-                const sNode = graph.findById(tM.source)
-                const sLinkPoint = sNode.getLinkPoint(tEndPoint)
+				})
+				tartgetEdge = tartgetEdge[0]
+				const tM = tartgetEdge.getModel()
+				const tEndPoint = tM.endPoint
+				const sNode = graph.findById(tM.source)
+				const sLinkPoint = sNode.getLinkPoint(tEndPoint)
 				const sAnchorIndex = sLinkPoint.anchorIndex
-                graph.update(tartgetEdge, {
+				
+				graph.update(tartgetEdge, {
 					sourceAnchor: sAnchorIndex,
-                }, true)
-            }
+				}, true)
+			}				
+            
             graph.update(item, model)
             graph.paint()
 		})
+
+		graph.on('node:dragend', (e) => {
+			graph.getCombos().forEach((combo) => {
+			  graph.setItemState(combo, 'dragenter', false);
+			});
+		});
 		
 		graph.on('node:contextmenu', evt => {
 			const { item } = evt
@@ -382,12 +406,12 @@ const Editor = () => {
     }
 
     useEffect(() => {
-        setGraphObj() // 初始化画布
+        setGraphObj()
     }, [])
 
 	useEffect(() => {
 		if (graph && treeData) {
-            renderGraph(treeData) // 渲染画布
+            renderGraph(treeData) 
         }
     }, [treeData, graph])
 
@@ -465,11 +489,11 @@ const Editor = () => {
                 <div className={styles.editBox} id={"container"} >
 				<div style={{ display:'flex', justifyContent: 'flex-end'}}>
 				 	<button onClick={() => graph.downloadImage()}>Download Image</button>
-					<button	onClick={() => addCombo()} disabled={selectedNodes.length !== 2}>Merge</button>
+					<button	onClick={() => addCombo()} disabled={isButtonDisabled}>Merge</button>
 						<Input
-								type={"color"}
-								onChange={(e) => changeColor(selectedNodeId, e.target.value)}
-								style={{ width: '5%' }}
+							type={"color"}
+							onChange={(e) => changeColor(selectedNodeId, e.target.value)}
+							style={{ width: '5%' }}
 						/>
 					</div>
 				</div>
