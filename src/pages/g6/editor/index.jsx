@@ -79,8 +79,10 @@ const Editor = () => {
 	const [nodeContextMenuX, setNodeContextMenuX] = useState(0)
 	const [nodeContextMenuY, setNodeContextMenuY] = useState(0)
 	const [selectedNodeId, setSelectedNodeId] = useState('')
+	const [selectedComboId, setSelectedComboId] = useState('')
 	const [selectedNodes, setSelectedNodes] = useState([])
-	const [isButtonDisabled, setIsButtonDisabled] = useState(true)
+	const [isMergeButtonDisabled, setIsMergeButtonDisabled] = useState(true)
+	const [isUnmergeButtonDisabled, setIsUnmergeButtonDisabled] = useState(true)
 
 	const contextMenu = new G6.Menu({
 		getContent(evt) {
@@ -184,19 +186,32 @@ const Editor = () => {
 		selectedNodes.forEach(node => {
 			comboId = comboId.concat(node._cfg.id)
 		})
-		const data = { ...treeData, combos: [...treeData.combos, { id: comboId, label: comboId, labelCfg: { position: 'center' } }] }
-		renderGraph(data)					
-		
-		const combo = graph.findById(comboId)
-		selectedNodes.forEach(selectedNode => {
-			const node = graph.findById(selectedNode._cfg.id)
-			combo.addChild(node)
-		})
 
+		const nodeIds = selectedNodes.map(node => node._cfg.id)
+		graph.createCombo(
+			{
+				id: comboId,
+				label: comboId,
+				collapsed: true
+			},
+			[...nodeIds]
+		  );
+	}
+	
+	const removeCombo = () => {
+		graph.collapseExpandCombo(selectedComboId)
+		graph.uncombo(selectedComboId)
+		selectedNodes.forEach(selectedNode => {
+			const node = graph.findById(selectedNode?._cfg?.id)
+
+			if (node) {
+				graph.setItemState(node, "selected", false)
+			}
+		})
+		setSelectedComboId('')
+		setSelectedNodeId('')
 		setSelectedNodes([])
-		setIsButtonDisabled(true)
-		graph.collapseCombo(comboId)
-		graph.paint()
+		setIsUnmergeButtonDisabled(true)
 	}
 
     const setGraphObj = () => {
@@ -257,72 +272,40 @@ const Editor = () => {
 
 		graph.on('aftercreateedge', (e) => {
 			graph.save().edges;
-		  });
-		
-		graph.on('combo:click', (e) => {
-			setSelectedNodeId(e.item._cfg.id)
-			if (e.target.get('name') === 'combo-marker-shape') {
-			  graph.collapseExpandCombo(e.item);
-			}
-		  });
+		  });		
 		  
-		graph.on('combo:dragend', (e) => {
-			graph.getCombos().forEach((combo) => {
-			  graph.setItemState(combo, 'dragenter', false);
-			});
-		});		
-		  
-		  graph.on('combo:dragenter', (e) => {
-			graph.setItemState(e.item, 'dragenter', true);
-		  });
-		
-		  graph.on('combo:dragleave', (e) => {
-			graph.setItemState(e.item, 'dragenter', false);
-		  });
-		  
-		  graph.on('combo:mouseenter', (evt) => {
-			const { item } = evt;
-			graph.setItemState(item, 'active', true);
-		  });
-		  
-		  graph.on('combo:mouseleave', (evt) => {
-			const { item } = evt;
-			graph.setItemState(item, 'active', false);
-		  });
-
-		graph.on("node:click", (evt) => {
-			const { item } = evt
-			const {states, id} = item._cfg
-			let nodes = selectedNodes	
-
-			if (states.includes('selected')) {
-				graph.setItemState(item, "selected", true)
-				graph.setItemState(item, "unselected", false)
-
-				setSelectedNodeId(id)
+		  graph.on('combo:dragend', (e) => {
+			  graph.getCombos().forEach((combo) => {
+				  graph.setItemState(combo, 'dragenter', false);
+				});
+			});		
 			
-				if (!nodes.find(node => node._cfg.id === id)) {
-					nodes.push(item)
-				}
-				if (nodes.length > 2) {
-					nodes.shift()
-				}
-				if (nodes.length === 2) {
-					setIsButtonDisabled(false)
-				}
-				console.log(nodes)
-			} else {
-				graph.setItemState(item, "selected", false)
-				graph.setItemState(item, "unselected", true)
-				nodes = nodes.filter(node => node._cfg.id !== id)
+			graph.on('combo:dragenter', (e) => {
+				graph.setItemState(e.item, 'dragenter', true);
+			});
+			
+			graph.on('combo:dragleave', (e) => {
+				graph.setItemState(e.item, 'dragenter', false);
+			});
+			
+			graph.on('combo:mouseenter', (evt) => {
+				const { item } = evt;
+				graph.setItemState(item, 'active', true);
+			});
+			
+			graph.on('combo:mouseleave', (evt) => {
+				const { item } = evt;
+				graph.setItemState(item, 'active', false);
+			});
+			
+		graph.on('combo:click', (evt) => {
+			if (evt.target.get('name') === 'combo-marker-shape') {
+				graph.collapseExpandCombo(evt.item);
 			}
-			setSelectedNodes(nodes)			
-
-			nodes.forEach(selectedNode => {
-				const node = graph.findById(selectedNode._cfg.id)
-				
-				graph.setItemState(node, "selected", true)
-			})
+			onClickBehavior(evt, graph)
+		});
+		graph.on("node:click", (evt) => {
+			onClickBehavior(evt, graph)
 		})		
 
 		graph.on("node:drag", (evt) => {
@@ -397,7 +380,7 @@ const Editor = () => {
 			const { item } = e
 			const model = item.getModel()
 			setSelectedNodeId(model.id)
-			graph.setItemState(e.item, 'selected', true);
+			graph.setItemState(e.item, 'selected', true);			
 		  })
 
         graphRef.current = graph
@@ -419,7 +402,51 @@ const Editor = () => {
         graph.clear(); 
         graph.data(data);
         graph.render(); 
-    }
+	}
+	
+	const onClickBehavior = (evt, graph) => {
+		const { item } = evt
+		const {states, id, type} = item._cfg
+		let nodes = selectedNodes
+
+		if (states.includes('selected')) {
+			graph.setItemState(item, "selected", true)
+			graph.setItemState(item, "unselected", false)
+			
+			if (type === 'combo') {
+				setIsUnmergeButtonDisabled(false)
+				setSelectedComboId(id)
+				setSelectedNodeId('')
+			} else {
+				setSelectedNodeId(id)
+				setSelectedComboId('')
+			}
+		
+			if (!nodes.find(node => node?._cfg?.id === id)) {
+				nodes.push(item)
+			}
+			if (nodes.length > 2) {
+				nodes.shift()
+			}
+			if (nodes.length === 2) {
+				setIsMergeButtonDisabled(false)
+			}
+		} else {
+			graph.setItemState(item, "selected", false)
+			graph.setItemState(item, "unselected", true)
+			nodes = nodes.filter(node => node?._cfg?.id !== id)
+		}
+		console.log(nodes)
+		setSelectedNodes(nodes)			
+
+		nodes.forEach(selectedNode => {
+			const node = graph.findById(selectedNode?._cfg?.id)
+
+			if (node) {
+				graph.setItemState(node, "selected", true)
+			}
+		})
+	}
 
     const initEdit = (target, type) => {
         const edit = inputEditRef.current
@@ -456,15 +483,12 @@ const Editor = () => {
     }, [currentId])
 
     document.onkeydown = (e) => {
-        // 键盘按下操作
         e.preventDefault()
         const { keyCode } = e
         if (keyCode === 9 && editorStore.currentId) {
-            // tab键 添加子节点
             addChildItem()
         }
         if (keyCode === 13 && editorStore.currentId) {
-            // 回车时 找到目标节点 显示文本编辑框
             const model = graph.findDataById(editorStore.currentId)
             textShow()
             setCurrentId(model.id)
@@ -489,10 +513,11 @@ const Editor = () => {
                 <div className={styles.editBox} id={"container"} >
 				<div style={{ display:'flex', justifyContent: 'flex-end'}}>
 				 	<button onClick={() => graph.downloadImage()}>Download Image</button>
-					<button	onClick={() => addCombo()} disabled={isButtonDisabled}>Merge</button>
+					<button onClick={() => addCombo()} disabled={isMergeButtonDisabled}>Merge</button>
+					<button onClick={() => removeCombo()} disabled={isUnmergeButtonDisabled}>Unmerge</button>
 						<Input
 							type={"color"}
-							onChange={(e) => changeColor(selectedNodeId, e.target.value)}
+							onChange={(e) => changeColor(selectedNodeId || selectedComboId, e.target.value)}
 							style={{ width: '5%' }}
 						/>
 					</div>
